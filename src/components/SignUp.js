@@ -1,7 +1,7 @@
 // src/components/SignUp.js
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore"; 
 import { auth, db } from '../firebase';
 
 export default function SignUp({ toggleForm }) {
@@ -28,16 +28,19 @@ export default function SignUp({ toggleForm }) {
         displayName: nickname
       });
 
-      // --- UPDATED: Add isPaid: false for every new user ---
+      // --- UPDATED: Also save nickname and email to Firestore ---
       const initialProgress = {
+        displayName: nickname, // Add nickname
+        email: email,           // Add email
         level: 1,
         badges: 0,
         streak: 0,
         ideasCreated: 0,
         completedLessons: [],
         currentLesson: 1,
-        isPaid: false // Every new user starts as a non-paying user
+        isPaid: false
       };
+      // The path is "users", user.uid, so we are setting a document with the user's ID
       await setDoc(doc(db, "users", user.uid), initialProgress);
 
     } catch (err) {
@@ -108,7 +111,7 @@ export default function SignUp({ toggleForm }) {
       </form>
       <p className="text-center text-gray-600 text-sm">
         Already have an account?{' '}
-        <button onClick={toggleForm} className="font-bold text-blue-500 hover:text-blue-800 focus:outline-none">
+        <button onClick={() => toggleForm('login')} className="font-bold text-blue-500 hover:text-blue-800 focus:outline-none">
           Log In
         </button>
       </p>
