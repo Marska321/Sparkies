@@ -1,7 +1,8 @@
 // src/components/SignUp.js
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../firebase'; // Import auth from our setup file
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from '../firebase';
 
 export default function SignUp({ toggleForm }) {
   const [email, setEmail] = useState('');
@@ -21,11 +22,24 @@ export default function SignUp({ toggleForm }) {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // After creating the user, update their profile with the nickname
-      await updateProfile(userCredential.user, {
+      const user = userCredential.user;
+
+      await updateProfile(user, {
         displayName: nickname
       });
-      // The onAuthStateChanged listener in AuthContext will handle the rest
+
+      // --- UPDATED: Add isPaid: false for every new user ---
+      const initialProgress = {
+        level: 1,
+        badges: 0,
+        streak: 0,
+        ideasCreated: 0,
+        completedLessons: [],
+        currentLesson: 1,
+        isPaid: false // Every new user starts as a non-paying user
+      };
+      await setDoc(doc(db, "users", user.uid), initialProgress);
+
     } catch (err) {
       setError('Failed to create an account. Please check your email and password.');
       console.error(err);
