@@ -44,9 +44,19 @@ export default function Login({ toggleForm }) {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-            Password
-          </label>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-gray-700 text-sm font-bold" htmlFor="password">
+              Password
+            </label>
+            {/* --- NEW: Forgot Password Link --- */}
+            <button
+              type="button"
+              onClick={() => toggleForm('forgotPassword')}
+              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+            >
+              Forgot Password?
+            </button>
+          </div>
           <input
             id="password"
             type="password"
@@ -69,7 +79,7 @@ export default function Login({ toggleForm }) {
       </form>
       <p className="text-center text-gray-600 text-sm">
         Don't have an account?{' '}
-        <button onClick={toggleForm} className="font-bold text-blue-500 hover:text-blue-800 focus:outline-none">
+        <button onClick={() => toggleForm('signup')} className="font-bold text-blue-500 hover:text-blue-800 focus:outline-none">
           Sign Up
         </button>
       </p>
