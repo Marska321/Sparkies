@@ -1,6 +1,7 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks, LogOut, DollarSign } from 'lucide-react';
+// UPDATED: Replaced 'Tool' with 'Wrench'
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { useModal } from './contexts/ModalContext';
@@ -133,6 +134,7 @@ const MainApp = () => {
           </div>
           <div className="flex items-center gap-6">
             {userProgress.isPaid && <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold"><Award size={16}/><span>Premium</span></div>}
+            {userProgress.isAdmin && <button onClick={() => setCurrentView('admin')} className="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold"><Shield size={16}/><span>Admin</span></button>}
             <div className="flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">{currentUser.displayName?.charAt(0).toUpperCase() || 'S'}</div>
@@ -147,7 +149,6 @@ const MainApp = () => {
 
   const Dashboard = () => (
     <div className="space-y-8">
-       {/* --- UPDATED: Added animation classes to these cards --- */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div 
           onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} 
@@ -208,8 +209,8 @@ const MainApp = () => {
   
   const LessonCard = ({ lesson, onClick }) => {
     const isLockedByPayment = lesson.id > 1 && !lesson.isPaid;
-    const isLockedByProgression = !lesson.completed && !lesson.current;
-    const isLocked = isLockedByPayment || (isLockedByProgression && lesson.id !== userProgress.currentLesson);
+    const isLockedByProgression = !lesson.completed && lesson.id !== userProgress.currentLesson;
+    const isLocked = isLockedByPayment || isLockedByProgression;
     const cursorStyle = isLocked ? 'cursor-not-allowed' : 'cursor-pointer';
 
     return (
@@ -222,7 +223,7 @@ const MainApp = () => {
               <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
               {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
               {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
-              {isLockedByProgression && lesson.id !== userProgress.currentLesson && <Lock className="text-gray-400" size={20} />}
+              {isLockedByProgression && <Lock className="text-gray-400" size={20} />}
               {isLockedByPayment && <DollarSign className="text-yellow-500" size={20} />}
             </div>
             <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
@@ -243,7 +244,21 @@ const MainApp = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8"><div className="md:col-span-2"><h3 className="text-2xl font-bold text-gray-800 mb-4">Lesson Overview</h3><p className="text-gray-700 leading-relaxed">{lesson.content.overview}</p></div><div><h3 className="text-2xl font-bold text-gray-800 mb-4">Checklist</h3><ul className="space-y-3">{lesson.content.checklist.map((item, index) => (<li key={index} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{index + 1}</div><span className="text-gray-700">{item}</span></li>))}</ul></div></div>
       <div>
         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Activities</h2>
-        <div className="space-y-6">{lesson.content.activities.map((activity, index) => (<div key={activity.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200"><h3 className="text-xl font-bold text-blue-600 mb-4">Activity {index + 1}: {activity.title}</h3><div className="flex items-center gap-8 text-sm text-gray-600 mb-4"><span className="flex items-center gap-2"><Clock size={16}/> {activity.time}</span><span className="flex items-center gap-2"><Tool size={16}/> {activity.tools.join(', ')}</span></div><p className="text-gray-700 mb-4">{activity.description}</p><div className="bg-white p-4 rounded-lg border"><h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4><ul className="list-disc list-inside space-y-2 text-gray-600">{activity.tasks.map((task, i) => <li key={i}>{task}</li>)}</ul>{activity.writeAnswers && (<div className="mt-4 pt-4 border-t">{activity.writeAnswers.map((answer, i) => <p key={i} className="mt-2 font-mono text-sm">{answer}</p>)}</div>)}</div>{activity.tip && <p className="text-sm text-purple-600 bg-purple-50 p-3 mt-4 rounded-lg"><strong>Tip:</strong> {activity.tip}</p>}</div>))}</div>
+        <div className="space-y-6">{lesson.content.activities.map((activity, index) => (<div key={activity.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
+          <h3 className="text-xl font-bold text-blue-600 mb-4">Activity {index + 1}: {activity.title}</h3>
+          <div className="flex items-center gap-8 text-sm text-gray-600 mb-4">
+            <span className="flex items-center gap-2"><Clock size={16}/> {activity.time}</span>
+            {/* UPDATED: Replaced Tool with Wrench */}
+            <span className="flex items-center gap-2"><Wrench size={16}/> {activity.tools.join(', ')}</span>
+          </div>
+          <p className="text-gray-700 mb-4">{activity.description}</p>
+          <div className="bg-white p-4 rounded-lg border">
+            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4>
+            <ul className="list-disc list-inside space-y-2 text-gray-600">{activity.tasks.map((task, i) => <li key={i}>{task}</li>)}</ul>
+            {activity.writeAnswers && (<div className="mt-4 pt-4 border-t">{activity.writeAnswers.map((answer, i) => <p key={i} className="mt-2 font-mono text-sm">{answer}</p>)}</div>)}
+          </div>
+          {activity.tip && <p className="text-sm text-purple-600 bg-purple-50 p-3 mt-4 rounded-lg"><strong>Tip:</strong> {activity.tip}</p>}
+        </div>))}</div>
       </div>
       <div className="mt-8 pt-6 border-t-2 text-center">
         <button onClick={() => handleCompleteLesson(lesson.id)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}>
@@ -260,6 +275,7 @@ const MainApp = () => {
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
       case 'badges': return <BadgeCollection />;
+      case 'admin': return userProgress.isAdmin ? <AdminDashboard /> : <Dashboard />;
       default: return <Dashboard />;
     }
   };
@@ -268,14 +284,8 @@ const MainApp = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <style jsx global>{`
         @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in-up {
           animation: fade-in-up 0.5s ease-out forwards;
