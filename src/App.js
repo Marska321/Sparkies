@@ -191,4 +191,16 @@ const MainApp = () => {
 
   const BadgeCollection = () => (
     <div className="space-y-8">
-      <div className="text-center"><h2 className="text-3xl font-bold text-gray-8
+      <div className="text-center"><h2 className="text-3xl font-bold text-gray-800 mb-4">Your Badge Collection 🏆</h2><p className="text-gray-600">Earn badges by completing lessons and mastering entrepreneurship skills!</p></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {badges.map(badge => { const isEarned = userProgress.completedLessons.includes(badge.lesson); return <Badge key={badge.id} badge={{...badge, earned: isEarned }} />; })}
+      </div>
+    </div>
+  );
+    
+  const Badge = ({ badge }) => (
+    <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
+      <div className="text-center">
+        <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
+        <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
+        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</
