@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks, LogOut } from 'lucide-react';
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks, LogOut, DollarSign } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { auth, db } from './firebase';
@@ -62,7 +62,6 @@ const MainApp = () => {
     return () => unsub();
   }, [currentUser]);
 
-  // --- UPDATED: FUNCTION TO HANDLE COMPLETING LESSONS AND AWARDING BADGES ---
   const handleCompleteLesson = async (lessonId) => {
     if (!userProgress || !currentUser) return;
 
@@ -73,8 +72,6 @@ const MainApp = () => {
 
     try {
       const userDocRef = doc(db, "users", currentUser.uid);
-
-      // Check if this lesson completion unlocks a new badge
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
       
       const updatedProgress = {
@@ -85,7 +82,6 @@ const MainApp = () => {
       };
       
       await updateDoc(userDocRef, updatedProgress);
-      
       handleBackToDashboard();
 
     } catch (error) {
@@ -102,7 +98,7 @@ const MainApp = () => {
     }
   };
   
-  if (loadingProgress || !userProgress) { // Also check for userProgress to avoid errors on first render
+  if (loadingProgress || !userProgress) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="text-center">
@@ -112,18 +108,31 @@ const MainApp = () => {
     );
   }
 
+  // --- UPDATED: Main Access Control Logic ---
   const handleLessonClick = (lesson) => {
-    // Only allow clicking the current lesson or completed lessons
-    if (lesson.id === userProgress.currentLesson || userProgress.completedLessons.includes(lesson.id)) {
-        if (lesson.content) {
-            setSelectedLesson(lesson);
-        } else {
-            alert("This lesson's content is not yet available.");
-        }
-    } else {
-        alert("Please complete previous lessons to unlock this one!");
+    // Rule 1: Lesson 1 is always free and accessible
+    if (lesson.id === 1) {
+        if (lesson.content) setSelectedLesson(lesson);
+        return;
     }
+
+    // Rule 2: For lessons beyond 1, check if the user has paid
+    if (lesson.id > 1 && !userProgress.isPaid) {
+        alert("This lesson is for paid members! Please upgrade to unlock the full course.");
+        return;
+    }
+
+    // Rule 3: For paid users, check if the lesson is unlocked by progression
+    const isLockedByProgression = lesson.id !== userProgress.currentLesson && !userProgress.completedLessons.includes(lesson.id);
+    if (isLockedByProgression) {
+        alert("Please complete previous lessons to unlock this one!");
+        return;
+    }
+    
+    // If all checks pass, open the lesson
+    if (lesson.content) setSelectedLesson(lesson);
   };
+
 
   const handleBackToDashboard = () => {
     setSelectedLesson(null);
@@ -143,6 +152,8 @@ const MainApp = () => {
             </div>
           </div>
           <div className="flex items-center gap-6">
+             {/* --- NEW: Show a premium badge if paid --- */}
+            {userProgress.isPaid && <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold"><Award size={16}/><span>Premium</span></div>}
             <div className="flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
@@ -191,7 +202,8 @@ const MainApp = () => {
               lesson={{
                 ...lesson,
                 completed: userProgress.completedLessons.includes(lesson.id),
-                current: lesson.id === userProgress.currentLesson
+                current: lesson.id === userProgress.currentLesson,
+                isPaid: userProgress.isPaid // Pass payment status to card
               }} 
               onClick={() => handleLessonClick(lesson)} 
             />
@@ -201,7 +213,6 @@ const MainApp = () => {
     </div>
   );
 
-  // --- UPDATED: BadgeCollection Component ---
   const BadgeCollection = () => (
     <div className="space-y-8">
       <div className="text-center">
@@ -217,7 +228,6 @@ const MainApp = () => {
     </div>
   );
     
-  // --- UPDATED: Badge Component ---
   const Badge = ({ badge }) => (
     <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
       <div className="text-center">
@@ -233,27 +243,39 @@ const MainApp = () => {
       {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
     </div>
   );
+  
+  // --- UPDATED: LessonCard with visual lock for paid content ---
+  const LessonCard = ({ lesson, onClick }) => {
+    const isLockedByPayment = lesson.id > 1 && !lesson.isPaid;
+    const isLockedByProgression = !lesson.completed && !lesson.current;
+    const isLocked = isLockedByPayment || isLockedByProgression;
 
-  const LessonCard = ({ lesson, onClick }) => (
-    <div onClick={onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${!lesson.completed && !lesson.current ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
-            {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
-            {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
-            {!lesson.completed && !lesson.current && <Lock className="text-gray-400" size={20} />}
-          </div>
-          <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span>
+    const cursorStyle = isLocked && lesson.id !==1 ? 'cursor-not-allowed' : 'cursor-pointer';
+
+    return (
+      <div onClick={onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 ${isLocked ? '' : 'hover:scale-105'} ${cursorStyle} ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300'}`}>
+        {isLocked && lesson.id !==1 && <div className="absolute inset-0 bg-gray-200 bg-opacity-50 rounded-xl z-10"></div>}
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
+              {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
+              {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
+              {isLockedByProgression && lesson.id !== userProgress.currentLesson && <Lock className="text-gray-400" size={20} />}
+              {isLockedByPayment && <DollarSign className="text-yellow-500" size={20} />}
+            </div>
+            <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span>
+            </div>
           </div>
         </div>
+        {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
       </div>
-      {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
-    </div>
-  );
+    );
+  };
+
 
   const LessonDetailView = ({ lesson, onBack }) => (
     <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
@@ -266,7 +288,7 @@ const MainApp = () => {
           </div>
         </div>
         <button onClick={onBack} className="flex items-center gap-2 px-6 py-3 rounded-full font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all">
-          <ArrowLeft size={20} />
+          <ArrowLeft size={16} />
           Back
         </button>
       </div>
@@ -295,7 +317,23 @@ const MainApp = () => {
           {lesson.content.activities.map((activity, index) => (
             <div key={activity.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
               <h3 className="text-xl font-bold text-blue-600 mb-4">Activity {index + 1}: {activity.title}</h3>
-               {/* ... (Activity details are the same) ... */}
+              <div className="flex items-center gap-8 text-sm text-gray-600 mb-4">
+                  <span className="flex items-center gap-2"><Clock size={16}/> {activity.time}</span>
+                  <span className="flex items-center gap-2"><Tool size={16}/> {activity.tools.join(', ')}</span>
+              </div>
+              <p className="text-gray-700 mb-4">{activity.description}</p>
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4>
+                <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  {activity.tasks.map((task, i) => <li key={i}>{task}</li>)}
+                </ul>
+                {activity.writeAnswers && (
+                    <div className="mt-4 pt-4 border-t">
+                        {activity.writeAnswers.map((answer, i) => <p key={i} className="mt-2 font-mono text-sm">{answer}</p>)}
+                    </div>
+                )}
+              </div>
+              {activity.tip && <p className="text-sm text-purple-600 bg-purple-50 p-3 mt-4 rounded-lg"><strong>Tip:</strong> {activity.tip}</p>}
             </div>
           ))}
         </div>
