@@ -1,12 +1,53 @@
+// src/App.js
 import React, { useState } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks } from 'lucide-react';
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks, LogOut } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
-import { useAuth } from './contexts/AuthContext'; // <= IMPORT THE AUTH CONTEXT
+import { useAuth } from './contexts/AuthContext';
+import { auth } from './firebase'; // Import auth for the logout function
+import Login from './components/Login'; // Import Login component
+import SignUp from './components/SignUp'; // Import SignUp component
 
 export default function App() {
-  const { currentUser } = useAuth(); // <= GET THE CURRENT USER FROM THE CONTEXT
+  const { currentUser } = useAuth();
+  const [authView, setAuthView] = useState('login'); // 'login' or 'signup'
+
+  // This is the component that will handle logged-out users
+  const AuthGate = () => {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4">
+        <div className="flex items-center gap-3 mb-8">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-full">
+              <Star className="text-white" size={32} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800">SparkSkill</h1>
+              <p className="text-lg text-gray-600">Young Entrepreneur Academy</p>
+            </div>
+        </div>
+        {authView === 'login' ? (
+          <Login toggleForm={() => setAuthView('signup')} />
+        ) : (
+          <SignUp toggleForm={() => setAuthView('login')} />
+        )}
+      </div>
+    );
+  };
+
+  // If no user is logged in, show the AuthGate
+  if (!currentUser) {
+    return <AuthGate />;
+  }
+
+  // If a user IS logged in, show the main application
+  return <MainApp />;
+}
+
+// I've moved the main application into its own component for cleanliness
+const MainApp = () => {
+  const { currentUser } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedLesson, setSelectedLesson] = useState(null);
+  // NOTE: This userProgress state is still temporary. We will connect it to Firestore next.
   const [userProgress, setUserProgress] = useState({
     level: 3,
     badges: 3,
@@ -16,7 +57,14 @@ export default function App() {
     currentLesson: 4
   });
 
-  // --- Event Handlers ---
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (error) {
+      console.error("Failed to log out", error);
+    }
+  };
+
   const handleLessonClick = (lesson) => {
     if (lesson.content) {
       setSelectedLesson(lesson);
@@ -30,51 +78,7 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  // --- Components (No changes to these sub-components) ---
-
-  const Badge = ({ badge }) => (
-    <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
-      <div className="text-center">
-        <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
-        <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
-        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</p>
-        {badge.earned && (<p className="text-xs text-green-600 font-medium mt-2">Earned {badge.date}</p>)}
-      </div>
-      {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
-    </div>
-  );
-
-  const LessonCard = ({ lesson, onClick }) => (
-    <div onClick={onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 cursor-pointer ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
-            {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
-            {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
-            {!lesson.completed && !lesson.current && <Lock className="text-gray-400" size={20} />}
-          </div>
-          <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span>
-          </div>
-          {lesson.current && lesson.progress && (
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>Progress</span><span>{lesson.progress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${lesson.progress}%` }}></div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
-    </div>
-  );
-
+  // --- Sub-Components ---
   const Navigation = () => (
     <div className="bg-white shadow-lg border-b-4 border-blue-400">
       <div className="max-w-7xl mx-auto px-4 py-4">
@@ -86,19 +90,21 @@ export default function App() {
               <p className="text-sm text-gray-600">Young Entrepreneur Academy</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                 {/* Show the first letter of the user's name, or 'S' if no user */}
-                 {currentUser ? currentUser.displayName?.charAt(0).toUpperCase() || 'S' : 'A'}
+                 {currentUser.displayName?.charAt(0).toUpperCase() || 'S'}
               </div>
               <div>
-                 {/* Show the user's nickname, or a default if not available */}
-                <p className="font-bold text-gray-800">{currentUser ? currentUser.displayName || "Spark Star" : "Alex SparkStar"}</p>
+                <p className="font-bold text-gray-800">{currentUser.displayName || "Spark Star"}</p>
                 <p className="text-xs text-gray-600">Level {userProgress.level} Entrepreneur</p>
               </div>
             </div>
+             <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-red-500 transition-colors">
+                <LogOut size={16} />
+                <span>Log Out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -146,7 +152,38 @@ export default function App() {
       </div>
     </div>
   );
-  
+
+  const LessonCard = ({ lesson, onClick }) => (
+    <div onClick={onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 cursor-pointer ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
+      <div className="flex items-start gap-4">
+        <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
+            {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
+            {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
+            {!lesson.completed && !lesson.current && <Lock className="text-gray-400" size={20} />}
+          </div>
+          <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span>
+          </div>
+          {lesson.current && lesson.progress && (
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <span>Progress</span><span>{lesson.progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${lesson.progress}%` }}></div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
+    </div>
+  );
+
   const LessonDetailView = ({ lesson, onBack }) => (
     <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
       <div className="flex items-center justify-between mb-8 border-b-2 pb-6 border-gray-100">
@@ -162,7 +199,6 @@ export default function App() {
           Back
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
         <div className="md:col-span-2">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">Lesson Overview</h3>
@@ -180,7 +216,6 @@ export default function App() {
           </ul>
         </div>
       </div>
-
       <div>
         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Activities</h2>
         <div className="space-y-6">
@@ -211,22 +246,6 @@ export default function App() {
     </div>
   );
 
-  // This is the main logic that protects our app
-  if (!currentUser) {
-    // If no user is logged in, we can show a login/signup form here later.
-    // For now, we'll just show a simple message.
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-            <h1 className="text-2xl font-bold">Welcome to SparkSkill!</h1>
-            <p className="text-gray-600">Please sign up or log in to continue.</p>
-            {/* We will add the actual Login and SignUp components here in the next step */}
-        </div>
-      </div>
-    )
-  }
-
-  // If a user IS logged in, show the main app content
   const renderContent = () => {
     if (selectedLesson) {
       return <LessonDetailView lesson={selectedLesson} onBack={handleBackToDashboard} />;
