@@ -4,7 +4,6 @@ import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckC
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { auth, db } from './firebase';
-// NEW: Import the 'updateDoc' function from Firestore
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import Login from './components/Login';
 import SignUp from './components/SignUp';
@@ -47,7 +46,6 @@ const MainApp = () => {
   const [userProgress, setUserProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
 
-  // This useEffect correctly listens for real-time updates to user progress
   useEffect(() => {
     if (!currentUser) return;
 
@@ -63,33 +61,31 @@ const MainApp = () => {
 
     return () => unsub();
   }, [currentUser]);
-  
-  // --- NEW: FUNCTION TO SAVE PROGRESS ---
+
+  // --- UPDATED: FUNCTION TO HANDLE COMPLETING LESSONS AND AWARDING BADGES ---
   const handleCompleteLesson = async (lessonId) => {
     if (!userProgress || !currentUser) return;
 
-    // Prevent re-completing a lesson
     if (userProgress.completedLessons.includes(lessonId)) {
         alert("You've already completed this lesson!");
         return;
     }
 
     try {
-      // Get a reference to the user's document in Firestore
       const userDocRef = doc(db, "users", currentUser.uid);
 
-      // Prepare the new progress data
+      // Check if this lesson completion unlocks a new badge
+      const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
+      
       const updatedProgress = {
         ...userProgress,
         completedLessons: [...userProgress.completedLessons, lessonId],
         currentLesson: userProgress.currentLesson + 1,
-        // Optional: Add logic here to award badges based on lessonId
+        badges: newBadgesCount,
       };
       
-      // Update the document in Firestore
       await updateDoc(userDocRef, updatedProgress);
       
-      // After successfully saving, return to the dashboard
       handleBackToDashboard();
 
     } catch (error) {
@@ -106,7 +102,7 @@ const MainApp = () => {
     }
   };
   
-  if (loadingProgress) {
+  if (loadingProgress || !userProgress) { // Also check for userProgress to avoid errors on first render
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="text-center">
@@ -117,10 +113,15 @@ const MainApp = () => {
   }
 
   const handleLessonClick = (lesson) => {
-    if (lesson.content) {
-      setSelectedLesson(lesson);
+    // Only allow clicking the current lesson or completed lessons
+    if (lesson.id === userProgress.currentLesson || userProgress.completedLessons.includes(lesson.id)) {
+        if (lesson.content) {
+            setSelectedLesson(lesson);
+        } else {
+            alert("This lesson's content is not yet available.");
+        }
     } else {
-      alert("This lesson's content is not yet available.");
+        alert("Please complete previous lessons to unlock this one!");
     }
   };
 
@@ -165,10 +166,10 @@ const MainApp = () => {
   const Dashboard = () => (
     <div className="space-y-8">
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div onClick={() => { const current = lessons.find(l => l.current); if (current) handleLessonClick(current); }} className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
+        <div onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
           <h3 className="font-bold text-lg mb-2">Continue Learning</h3>
-          <p className="text-orange-100 text-sm mb-4">Perfect Your Pitch • 2/5 complete</p>
-          <div className="flex items-center gap-2"><PlayCircle size={20} /><span>Resume Lesson 4</span></div>
+          <p className="text-orange-100 text-sm mb-4">{lessons.find(l => l.id === userProgress.currentLesson)?.title || 'All Done!'}</p>
+          <div className="flex items-center gap-2"><PlayCircle size={20} /><span>Resume Lesson {userProgress.currentLesson}</span></div>
         </div>
         <div onClick={() => setCurrentView('badges')} className="bg-gradient-to-br from-purple-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
           <h3 className="font-bold text-lg mb-2">View Badges</h3>
@@ -200,6 +201,7 @@ const MainApp = () => {
     </div>
   );
 
+  // --- UPDATED: BadgeCollection Component ---
   const BadgeCollection = () => (
     <div className="space-y-8">
       <div className="text-center">
@@ -207,8 +209,28 @@ const MainApp = () => {
         <p className="text-gray-600">Earn badges by completing lessons and mastering entrepreneurship skills!</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {badges.map(badge => (<Badge key={badge.id} badge={badge} />))}
+        {badges.map(badge => {
+            const isEarned = userProgress.completedLessons.includes(badge.lesson);
+            return <Badge key={badge.id} badge={{...badge, earned: isEarned }} />;
+        })}
       </div>
+    </div>
+  );
+    
+  // --- UPDATED: Badge Component ---
+  const Badge = ({ badge }) => (
+    <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
+      <div className="text-center">
+        <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
+        <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
+        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</p>
+        {badge.earned && (
+          <p className="text-xs text-green-600 font-medium mt-2">
+            Earned {new Date().toLocaleDateString()}
+          </p>
+        )}
+      </div>
+      {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
     </div>
   );
 
@@ -233,7 +255,7 @@ const MainApp = () => {
     </div>
   );
 
-  const LessonDetailView = ({ lesson, onBack, onComplete }) => (
+  const LessonDetailView = ({ lesson, onBack }) => (
     <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
       <div className="flex items-center justify-between mb-8 border-b-2 pb-6 border-gray-100">
         <div className="flex items-center gap-6">
@@ -249,19 +271,45 @@ const MainApp = () => {
         </button>
       </div>
       
-      {/* ... (rest of the lesson detail content is the same) ... */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8"> {/* Omitted for brevity */}</div>
-      <div> {/* Omitted for brevity */} </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div className="md:col-span-2">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Lesson Overview</h3>
+          <p className="text-gray-700 leading-relaxed">{lesson.content.overview}</p>
+        </div>
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Checklist</h3>
+          <ul className="space-y-3">
+            {lesson.content.checklist.map((item, index) => (
+              <li key={index} className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{index + 1}</div>
+                <span className="text-gray-700">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      
+      <div>
+        <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Activities</h2>
+        <div className="space-y-6">
+          {lesson.content.activities.map((activity, index) => (
+            <div key={activity.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
+              <h3 className="text-xl font-bold text-blue-600 mb-4">Activity {index + 1}: {activity.title}</h3>
+               {/* ... (Activity details are the same) ... */}
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* NEW: COMPLETE LESSON BUTTON */}
       <div className="mt-8 pt-6 border-t-2 text-center">
         <button 
-          onClick={() => onComplete(lesson.id)}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl"
+          onClick={() => handleCompleteLesson(lesson.id)}
+          className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400"
+          disabled={userProgress.completedLessons.includes(lesson.id)}
         >
           <div className="flex items-center gap-3">
-            <CheckCircle size={24}/>
-            <span>Mark as Complete</span>
+            {userProgress.completedLessons.includes(lesson.id) ? <CheckCircle size={24}/> : <Trophy size={24}/>}
+            <span>{userProgress.completedLessons.includes(lesson.id) ? 'Lesson Complete!' : 'Mark as Complete'}</span>
           </div>
         </button>
       </div>
@@ -270,7 +318,7 @@ const MainApp = () => {
 
   const renderContent = () => {
     if (selectedLesson) {
-      return <LessonDetailView lesson={selectedLesson} onBack={handleBackToDashboard} onComplete={handleCompleteLesson} />;
+      return <LessonDetailView lesson={selectedLesson} onBack={handleBackToDashboard} />;
     }
     switch (currentView) {
       case 'dashboard':
