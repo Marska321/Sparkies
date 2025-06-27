@@ -8,15 +8,14 @@ import { auth, db } from './firebase';
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import Login from './components/Login';
 import SignUp from './components/SignUp';
-import ForgotPassword from './components/ForgotPassword'; // Import the new component
+import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
 
 export default function App() {
   const { currentUser } = useAuth();
-  const [authView, setAuthView] = useState('login'); // 'login', 'signup', or 'forgotPassword'
+  const [authView, setAuthView] = useState('login');
   const { isOpen, title, content, hideModal } = useModal();
 
-  // --- UPDATED: AuthGate now manages three different views ---
   const AuthGate = () => {
     let viewComponent;
     switch(authView) {
@@ -56,14 +55,7 @@ export default function App() {
   );
 }
 
-// MainApp component remains unchanged from the previous step.
-// You can copy its full definition from our last interaction.
-// I am omitting it here for brevity.
 const MainApp = () => {
-  /* ... Same code as before ... */
-  // ... (Includes Navigation, Dashboard, BadgeCollection, etc.) ...
-  
-  // For completeness, here is the full code for MainApp again:
   const { currentUser } = useAuth();
   const { showModal } = useModal();
   const [currentView, setCurrentView] = useState('dashboard');
@@ -96,6 +88,7 @@ const MainApp = () => {
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
       const updatedProgress = { ...userProgress, completedLessons: [...userProgress.completedLessons, lessonId], currentLesson: userProgress.currentLesson + 1, badges: newBadgesCount };
       await updateDoc(userDocRef, updatedProgress);
+      showModal("Lesson Complete!", "Great job! Your progress has been saved.");
       handleBackToDashboard();
     } catch (error) {
       console.error("Error completing lesson: ", error);
@@ -117,7 +110,7 @@ const MainApp = () => {
 
   const handleLessonClick = (lesson) => {
     if (lesson.id > 1 && !userProgress.isPaid) {
-        showModal("Premium Content", "This lesson is for paid members! Please upgrade to unlock the full course.");
+        showModal("Premium Content", "This lesson is for paid members! Please contact us to upgrade and unlock the full course.");
         return;
     }
     const isLockedByProgression = lesson.id !== userProgress.currentLesson && !userProgress.completedLessons.includes(lesson.id);
@@ -154,18 +147,30 @@ const MainApp = () => {
 
   const Dashboard = () => (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
+       {/* --- UPDATED: Added animation classes to these cards --- */}
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div 
+          onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} 
+          className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
+          style={{animationDelay: '100ms'}}
+        >
           <h3 className="font-bold text-lg mb-2">Continue Learning</h3>
           <p className="text-orange-100 text-sm mb-4">{lessons.find(l => l.id === userProgress.currentLesson)?.title || 'All Done!'}</p>
           <div className="flex items-center gap-2"><PlayCircle size={20} /><span>Resume Lesson {userProgress.currentLesson}</span></div>
         </div>
-        <div onClick={() => setCurrentView('badges')} className="bg-gradient-to-br from-purple-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
+        <div 
+          onClick={() => setCurrentView('badges')} 
+          className="bg-gradient-to-br from-purple-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
+          style={{animationDelay: '200ms'}}
+        >
           <h3 className="font-bold text-lg mb-2">View Badges</h3>
           <p className="text-purple-100 text-sm mb-4">{userProgress.badges} earned • {badges.length - userProgress.badges} to unlock</p>
           <div className="flex items-center gap-2"><Trophy size={20} /><span>Check Collection</span></div>
         </div>
-        <div className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300">
+        <div 
+          className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
+          style={{animationDelay: '300ms'}}
+        >
           <h3 className="font-bold text-lg mb-2">Track Progress</h3>
           <p className="text-green-100 text-sm mb-4">See your journey</p>
           <div className="flex items-center gap-2"><TrendingUp size={20} /><span>View Stats</span></div>
@@ -204,12 +209,12 @@ const MainApp = () => {
   const LessonCard = ({ lesson, onClick }) => {
     const isLockedByPayment = lesson.id > 1 && !lesson.isPaid;
     const isLockedByProgression = !lesson.completed && !lesson.current;
-    const isLocked = isLockedByPayment || isLockedByProgression;
-    const cursorStyle = isLocked && lesson.id !== 1 ? 'cursor-not-allowed' : 'cursor-pointer';
+    const isLocked = isLockedByPayment || (isLockedByProgression && lesson.id !== userProgress.currentLesson);
+    const cursorStyle = isLocked ? 'cursor-not-allowed' : 'cursor-pointer';
 
     return (
       <div onClick={isLocked ? null : onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 ${!isLocked ? 'hover:scale-105' : ''} ${cursorStyle} ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300'}`}>
-        {isLocked && lesson.id !== 1 && <div className="absolute inset-0 bg-gray-200 bg-opacity-50 rounded-xl z-10"></div>}
+        {isLocked && <div className="absolute inset-0 bg-gray-200 bg-opacity-50 rounded-xl z-10"></div>}
         <div className="flex items-start gap-4">
           <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
           <div className="flex-1">
@@ -261,6 +266,22 @@ const MainApp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <style jsx global>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.5s ease-out forwards;
+          opacity: 0; 
+        }
+      `}</style>
       <Navigation />
       <div className="max-w-7xl mx-auto px-4 py-8">
         {!selectedLesson && (
