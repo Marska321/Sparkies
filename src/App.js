@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Tool, ListChecks } from 'lucide-react';
-import { lessons, badges } from './lessonData.js'; // <= We are now importing the data
+import { lessons, badges } from './lessonData.js';
+import { useAuth } from './contexts/AuthContext'; // <= IMPORT THE AUTH CONTEXT
 
 export default function App() {
+  const { currentUser } = useAuth(); // <= GET THE CURRENT USER FROM THE CONTEXT
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [userProgress, setUserProgress] = useState({
@@ -13,9 +15,6 @@ export default function App() {
     completedLessons: [1, 2, 3],
     currentLesson: 4
   });
-
-  // Note: The 'lessons' and 'badges' arrays are now imported from lessonData.js
-  // They are no longer defined inside this component.
 
   // --- Event Handlers ---
   const handleLessonClick = (lesson) => {
@@ -31,7 +30,7 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  // --- Components ---
+  // --- Components (No changes to these sub-components) ---
 
   const Badge = ({ badge }) => (
     <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
@@ -90,9 +89,13 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">A</div>
+              <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                 {/* Show the first letter of the user's name, or 'S' if no user */}
+                 {currentUser ? currentUser.displayName?.charAt(0).toUpperCase() || 'S' : 'A'}
+              </div>
               <div>
-                <p className="font-bold text-gray-800">Alex SparkStar</p>
+                 {/* Show the user's nickname, or a default if not available */}
+                <p className="font-bold text-gray-800">{currentUser ? currentUser.displayName || "Spark Star" : "Alex SparkStar"}</p>
                 <p className="text-xs text-gray-600">Level {userProgress.level} Entrepreneur</p>
               </div>
             </div>
@@ -208,6 +211,22 @@ export default function App() {
     </div>
   );
 
+  // This is the main logic that protects our app
+  if (!currentUser) {
+    // If no user is logged in, we can show a login/signup form here later.
+    // For now, we'll just show a simple message.
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+            <h1 className="text-2xl font-bold">Welcome to SparkSkill!</h1>
+            <p className="text-gray-600">Please sign up or log in to continue.</p>
+            {/* We will add the actual Login and SignUp components here in the next step */}
+        </div>
+      </div>
+    )
+  }
+
+  // If a user IS logged in, show the main app content
   const renderContent = () => {
     if (selectedLesson) {
       return <LessonDetailView lesson={selectedLesson} onBack={handleBackToDashboard} />;
