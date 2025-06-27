@@ -10,7 +10,7 @@ import Login from './components/Login';
 import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
-import AdminDashboard from './components/AdminDashboard'; // <= THIS LINE WAS MISSING
+import AdminDashboard from './components/AdminDashboard';
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -140,7 +140,10 @@ const MainApp = () => {
               <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">{currentUser.displayName?.charAt(0).toUpperCase() || 'S'}</div>
               <div><p className="font-bold text-gray-800">{currentUser.displayName || "Spark Star"}</p><p className="text-xs text-gray-600">Level {userProgress.level} Entrepreneur</p></div>
             </div>
-            <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-red-500 transition-colors"><LogOut size={16} /><span>Log Out</span></button>
+            <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-red-500 transition-colors">
+              <LogOut size={16} />
+              <span>Log Out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -188,35 +191,4 @@ const MainApp = () => {
 
   const BadgeCollection = () => (
     <div className="space-y-8">
-      <div className="text-center"><h2 className="text-3xl font-bold text-gray-800 mb-4">Your Badge Collection 🏆</h2><p className="text-gray-600">Earn badges by completing lessons and mastering entrepreneurship skills!</p></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {badges.map(badge => { const isEarned = userProgress.completedLessons.includes(badge.lesson); return <Badge key={badge.id} badge={{...badge, earned: isEarned }} />; })}
-      </div>
-    </div>
-  );
-    
-  const Badge = ({ badge }) => (
-    <div className={`relative p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${badge.earned ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow-lg' : 'bg-gray-100 border-gray-300'}`}>
-      <div className="text-center">
-        <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
-        <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
-        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</p>
-        {badge.earned && (<p className="text-xs text-green-600 font-medium mt-2">Earned {new Date().toLocaleDateString()}</p>)}
-      </div>
-      {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
-    </div>
-  );
-  
-  const LessonCard = ({ lesson, onClick }) => {
-    const isLockedByPayment = lesson.id > 1 && !lesson.isPaid;
-    const isLockedByProgression = !lesson.completed && lesson.id !== userProgress.currentLesson;
-    const isLocked = isLockedByPayment || isLockedByProgression;
-    const cursorStyle = isLocked ? 'cursor-not-allowed' : 'cursor-pointer';
-
-    return (
-      <div onClick={isLocked ? null : onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 ${!isLocked ? 'hover:scale-105' : ''} ${cursorStyle} ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300'}`}>
-        {isLocked && <div className="absolute inset-0 bg-gray-200 bg-opacity-50 rounded-xl z-10"></div>}
-        <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+      <div className="text-center"><h2 className="text-3xl font-bold text-gray-8
