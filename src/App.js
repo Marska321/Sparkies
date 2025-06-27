@@ -203,4 +203,45 @@ const MainApp = () => {
       <div className="text-center">
         <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
         <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
-        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</
+        <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</p>
+        {badge.earned && (<p className="text-xs text-green-600 font-medium mt-2">Earned {new Date().toLocaleDateString()}</p>)}
+      </div>
+      {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
+    </div>
+  );
+  
+  const LessonCard = ({ lesson, onClick }) => {
+    const isLockedByPayment = lesson.id > 1 && !lesson.isPaid;
+    const isLockedByProgression = !lesson.completed && lesson.id !== userProgress.currentLesson;
+    const isLocked = isLockedByPayment || isLockedByProgression;
+    const cursorStyle = isLocked ? 'cursor-not-allowed' : 'cursor-pointer';
+
+    return (
+      <div onClick={isLocked ? null : onClick} className={`relative p-6 rounded-xl border-2 transition-all duration-300 ${!isLocked ? 'hover:scale-105' : ''} ${cursorStyle} ${lesson.completed ? 'bg-gradient-to-br from-green-50 to-blue-50 border-green-300 shadow-lg' : lesson.current ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-400 shadow-lg ring-2 ring-blue-300' : 'bg-white border-gray-300'}`}>
+        {isLocked && <div className="absolute inset-0 bg-gray-200 bg-opacity-50 rounded-xl z-10"></div>}
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
+              {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
+              {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
+              {isLockedByProgression && <Lock className="text-gray-400" size={20} />}
+              {isLockedByPayment && <DollarSign className="text-yellow-500" size={20} />}
+            </div>
+            <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
+            <div className="flex items-center gap-4 text-xs text-gray-500"><span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span></div>
+          </div>
+        </div>
+        {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
+      </div>
+    );
+  };
+
+  const LessonDetailView = ({ lesson, onBack }) => (
+    <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
+      <div className="flex items-center justify-between mb-8 border-b-2 pb-6 border-gray-100">
+        <div className="flex items-center gap-6"><div className={`text-4xl p-4 rounded-full text-white ${lesson.color}`}>{lesson.icon}</div><div><h1 className="text-4xl font-bold text-gray-800">{lesson.title}</h1><p className="text-gray-600 mt-1">{lesson.description}</p></div></div>
+        <button onClick={onBack} className="flex items-center gap-2 px-6 py-3 rounded-full font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"><ArrowLeft size={20} />Back</button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8"><div className="md:col-span-2"><h3 className="text-2xl font-bold text-gray-800
