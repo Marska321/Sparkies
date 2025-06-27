@@ -1,6 +1,5 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-// UPDATED: Replaced 'Tool' with 'Wrench'
 import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
@@ -11,6 +10,7 @@ import Login from './components/Login';
 import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
+import AdminDashboard from './components/AdminDashboard'; // <= THIS LINE WAS MISSING
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -220,88 +220,3 @@ const MainApp = () => {
           <div className={`p-3 rounded-full text-2xl ${lesson.color} text-white shadow-lg`}>{lesson.icon}</div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
-              {lesson.completed && <CheckCircle className="text-green-500" size={20} />}
-              {lesson.current && <PlayCircle className="text-blue-500" size={20} />}
-              {isLockedByProgression && <Lock className="text-gray-400" size={20} />}
-              {isLockedByPayment && <DollarSign className="text-yellow-500" size={20} />}
-            </div>
-            <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
-            <div className="flex items-center gap-4 text-xs text-gray-500"><span>{lesson.sections} sections</span><span>•</span><span>{lesson.duration}</span></div>
-          </div>
-        </div>
-        {lesson.completed && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2"><Trophy size={16} /></div>)}
-      </div>
-    );
-  };
-
-  const LessonDetailView = ({ lesson, onBack }) => (
-    <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
-      <div className="flex items-center justify-between mb-8 border-b-2 pb-6 border-gray-100">
-        <div className="flex items-center gap-6"><div className={`text-4xl p-4 rounded-full text-white ${lesson.color}`}>{lesson.icon}</div><div><h1 className="text-4xl font-bold text-gray-800">{lesson.title}</h1><p className="text-gray-600 mt-1">{lesson.description}</p></div></div>
-        <button onClick={onBack} className="flex items-center gap-2 px-6 py-3 rounded-full font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"><ArrowLeft size={20} />Back</button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8"><div className="md:col-span-2"><h3 className="text-2xl font-bold text-gray-800 mb-4">Lesson Overview</h3><p className="text-gray-700 leading-relaxed">{lesson.content.overview}</p></div><div><h3 className="text-2xl font-bold text-gray-800 mb-4">Checklist</h3><ul className="space-y-3">{lesson.content.checklist.map((item, index) => (<li key={index} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{index + 1}</div><span className="text-gray-700">{item}</span></li>))}</ul></div></div>
-      <div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Activities</h2>
-        <div className="space-y-6">{lesson.content.activities.map((activity, index) => (<div key={activity.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
-          <h3 className="text-xl font-bold text-blue-600 mb-4">Activity {index + 1}: {activity.title}</h3>
-          <div className="flex items-center gap-8 text-sm text-gray-600 mb-4">
-            <span className="flex items-center gap-2"><Clock size={16}/> {activity.time}</span>
-            {/* UPDATED: Replaced Tool with Wrench */}
-            <span className="flex items-center gap-2"><Wrench size={16}/> {activity.tools.join(', ')}</span>
-          </div>
-          <p className="text-gray-700 mb-4">{activity.description}</p>
-          <div className="bg-white p-4 rounded-lg border">
-            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4>
-            <ul className="list-disc list-inside space-y-2 text-gray-600">{activity.tasks.map((task, i) => <li key={i}>{task}</li>)}</ul>
-            {activity.writeAnswers && (<div className="mt-4 pt-4 border-t">{activity.writeAnswers.map((answer, i) => <p key={i} className="mt-2 font-mono text-sm">{answer}</p>)}</div>)}
-          </div>
-          {activity.tip && <p className="text-sm text-purple-600 bg-purple-50 p-3 mt-4 rounded-lg"><strong>Tip:</strong> {activity.tip}</p>}
-        </div>))}</div>
-      </div>
-      <div className="mt-8 pt-6 border-t-2 text-center">
-        <button onClick={() => handleCompleteLesson(lesson.id)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}>
-          <div className="flex items-center gap-3">{userProgress.completedLessons.includes(lesson.id) ? <CheckCircle size={24}/> : <Trophy size={24}/>}<span>{userProgress.completedLessons.includes(lesson.id) ? 'Lesson Complete!' : 'Mark as Complete'}</span></div>
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (selectedLesson) {
-      return <LessonDetailView lesson={selectedLesson} onBack={handleBackToDashboard} />;
-    }
-    switch (currentView) {
-      case 'dashboard': return <Dashboard />;
-      case 'badges': return <BadgeCollection />;
-      case 'admin': return userProgress.isAdmin ? <AdminDashboard /> : <Dashboard />;
-      default: return <Dashboard />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <style jsx global>{`
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.5s ease-out forwards;
-          opacity: 0; 
-        }
-      `}</style>
-      <Navigation />
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {!selectedLesson && (
-          <div className="flex gap-4 mb-8">
-            <button onClick={() => setCurrentView('dashboard')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'dashboard' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Dashboard</button>
-            <button onClick={() => setCurrentView('badges')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'badges' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Badge Collection</button>
-          </div>
-        )}
-        {renderContent()}
-      </div>
-    </div>
-  );
-};
