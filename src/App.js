@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield, Save, BookOpen } from 'lucide-react';
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield, Save, BookOpen, Send } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { useModal } from './contexts/ModalContext';
@@ -74,7 +74,6 @@ const MainApp = () => {
   const [userProgress, setUserProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
 
-  // This useEffect now also handles the daily login streak
   useEffect(() => {
     if (!currentUser) return;
     setLoadingProgress(true);
@@ -86,7 +85,6 @@ const MainApp = () => {
         const today = new Date();
         const lastLogin = userData.lastLogin?.toDate();
 
-        // Check for daily streak
         if (!isSameDay(lastLogin, today)) {
           const yesterday = new Date();
           yesterday.setDate(today.getDate() - 1);
@@ -97,7 +95,6 @@ const MainApp = () => {
             streak: newStreak,
             lastLogin: serverTimestamp()
           });
-          // The onSnapshot listener will automatically update the state with this change
         } else {
             setUserProgress(userData);
         }
@@ -117,7 +114,6 @@ const MainApp = () => {
     return () => unsub();
   }, [currentUser]);
 
-  // This function now also handles leveling up
   const handleCompleteLesson = async (lessonId, answers) => {
     if (!userProgress || !currentUser) return;
     if (userProgress.completedLessons.includes(lessonId)) {
@@ -128,8 +124,6 @@ const MainApp = () => {
       const userDocRef = doc(db, "users", currentUser.uid);
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
       const newCompletedLessons = [...userProgress.completedLessons, lessonId];
-
-      // Level up logic: Level up every 3 completed lessons
       const newLevel = Math.floor(newCompletedLessons.length / 3) + 1;
       
       const updatedProgress = { 
@@ -150,6 +144,31 @@ const MainApp = () => {
     } catch (error) {
       console.error("Error completing lesson: ", error);
       showModal("Save Error", "Failed to save your progress. Please try again.");
+    }
+  };
+
+  // --- NEW: Function to publish a showcase to a public collection ---
+  const handlePublishShowcase = async (lessonId, answers) => {
+    if (!userProgress || !currentUser) return;
+    
+    // Structure the public showcase data
+    const showcaseData = {
+        authorName: currentUser.displayName,
+        authorId: currentUser.uid,
+        lessonTitle: lessons.find(l => l.id === lessonId)?.title || "My Showcase",
+        answers: answers,
+        publishedAt: serverTimestamp()
+    };
+    
+    try {
+        // Create a new document in a top-level 'showcases' collection
+        // We use the user's ID to ensure they can only have one showcase published
+        const showcaseDocRef = doc(db, "showcases", currentUser.uid);
+        await setDoc(showcaseDocRef, showcaseData);
+        showModal("Showcase Published!", "Your work is now visible to the SparkVille community!");
+    } catch (error) {
+        console.error("Error publishing showcase:", error);
+        showModal("Publish Error", "Could not publish your showcase. Please try again.");
     }
   };
 
@@ -380,6 +399,12 @@ const MainApp = () => {
         <button onClick={() => handleCompleteLesson(lesson.id, answers)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}>
           <div className="flex items-center gap-3">{userProgress.completedLessons.includes(lesson.id) ? <CheckCircle size={24}/> : <Trophy size={24}/>}<span>{userProgress.completedLessons.includes(lesson.id) ? 'Lesson Complete!' : 'Mark as Complete'}</span></div>
         </button>
+        {/* NEW: Show Publish button only for lesson 11 */}
+        {lesson.id === 11 && (
+            <button onClick={() => handlePublishShowcase(lesson.id, answers)} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl">
+                <div className="flex items-center gap-3"><Send size={24}/><span>Publish to SparkVille</span></div>
+            </button>
+        )}
       </div>
     </div>
     );
