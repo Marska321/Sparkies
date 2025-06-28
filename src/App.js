@@ -14,7 +14,7 @@ import AdminDashboard from './components/AdminDashboard';
 import ProgressView from './components/ProgressView';
 import SparkFolio from './components/SparkFolio';
 
-// --- HELPER COMPONENTS (DEFINED AT TOP-LEVEL FOR STABILITY AND PERFORMANCE) ---
+// --- HELPER COMPONENTS (DEFINED AT TOP-LEVEL FOR STABILITY) ---
 
 const isSameDay = (date1, date2) => {
     if (!date1 || !date2) return false;
@@ -85,12 +85,13 @@ const LessonDetailView = ({ lesson, userProgress, onBack, onComplete, showModal 
     const { currentUser } = useAuth();
     const [answers, setAnswers] = useState(() => userProgress?.lessonAnswers?.[`lesson${lesson.id}`] || {});
     
-    const handleAnswerChange = (activity, taskIndex, value) => {
+    const handleAnswerChange = useCallback((activity, taskIndex, value) => {
         const key = activity.isReflection ? `reflection_${taskIndex}` : `activity${activity.id}_writeAnswer_${taskIndex}`;
         setAnswers(prev => ({ ...prev, [key]: value }));
-    };
+    }, []);
 
     const handleSaveProgress = useCallback(async () => {
+        if (!currentUser || !userProgress) return;
         try {
             const userDocRef = doc(db, "users", currentUser.uid);
             await updateDoc(userDocRef, {
@@ -162,16 +163,16 @@ const LessonDetailView = ({ lesson, userProgress, onBack, onComplete, showModal 
     );
 };
 
+// --- CORE APP LOGIC & ROUTING ---
+
 function AuthGate() {
   const [authView, setAuthView] = useState('login');
-
   let viewComponent;
   switch(authView) {
     case 'signup': viewComponent = <SignUp toggleForm={setAuthView} />; break;
     case 'forgotPassword': viewComponent = <ForgotPassword toggleForm={setAuthView} />; break;
     default: viewComponent = <Login toggleForm={setAuthView} />;
   }
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4">
       <div className="flex items-center gap-3 mb-8">
@@ -212,8 +213,7 @@ function MainApp() {
         const initialProgress = {
           displayName: currentUser.displayName || "New User", email: currentUser.email,
           level: 1, badges: 0, streak: 1, ideasCreated: 0,
-          completedLessons: [], currentLesson: 1, isPaid: false, lessonAnswers: {},
-          lastLogin: serverTimestamp()
+          completedLessons: [], currentLesson: 1, isPaid: false, lessonAnswers: {}
         };
         await setDoc(userDocRef, initialProgress);
       }
@@ -393,15 +393,14 @@ function MainApp() {
   );
 }
 
-// Final default export of the main App component
+// --- TOP-LEVEL APP WRAPPER ---
+// This is the true default export that combines the context providers with the App logic.
 export default function AppWrapper() {
-  const { isOpen, title, content, hideModal } = useModal();
-  const { currentUser } = useAuth();
-
   return (
-    <>
-      <Modal isOpen={isOpen} title={title} onClose={hideModal}>{content}</Modal>
-      {!currentUser ? <AuthGate /> : <MainApp />}
-    </>
+    <AuthProvider>
+      <ModalProvider>
+        <App />
+      </ModalProvider>
+    </AuthProvider>
   );
 }
