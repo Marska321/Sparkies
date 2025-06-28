@@ -96,13 +96,11 @@ const MainApp = () => {
       const userDocRef = doc(db, "users", currentUser.uid);
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
       
-      // --- NEW: Save answers along with other progress ---
       const updatedProgress = { 
         ...userProgress, 
         completedLessons: [...userProgress.completedLessons, lessonId], 
         currentLesson: userProgress.currentLesson + 1, 
         badges: newBadgesCount,
-        // Store answers in a nested map, e.g., { lesson1: { activity2: "My answer" } }
         lessonAnswers: {
           ...userProgress.lessonAnswers,
           [`lesson${lessonId}`]: answers
@@ -145,7 +143,7 @@ const MainApp = () => {
 
   const handleBackToDashboard = () => setSelectedLesson(null);
 
-  // --- All sub-components are now defined below ---
+  // --- Sub-Components ---
   
   const Navigation = () => (
     <div className="bg-white shadow-lg border-b-4 border-blue-400">
@@ -250,9 +248,7 @@ const MainApp = () => {
     );
   };
   
-  // --- NEW: LessonDetailView is now fully interactive ---
   const LessonDetailView = ({ lesson, onBack }) => {
-    // State to hold the user's answers for this specific lesson
     const [answers, setAnswers] = useState(() => {
         const savedAnswers = userProgress?.lessonAnswers?.[`lesson${lesson.id}`] || {};
         return savedAnswers;
@@ -303,7 +299,6 @@ const MainApp = () => {
             {activity.tasks.map((task, i) => {
                 const answerKey = `activity${activity.id}_task${i}`;
                 const value = answers[answerKey] || '';
-                // Render an input field for tasks with a fill-in-the-blank
                 if(task.includes("___")) {
                     const parts = task.split("___");
                     return (
@@ -319,7 +314,6 @@ const MainApp = () => {
                         </div>
                     )
                 }
-                // Otherwise, just render the task as text
                 return <li key={i} className="list-disc list-inside">{task}</li>
             })}
             </div>
@@ -353,7 +347,8 @@ const MainApp = () => {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderContent = () => {
     if (selectedLesson) {
