@@ -1,7 +1,7 @@
 // src/components/SignUp.js
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from "firebase/firestore"; 
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; 
 import { auth, db } from '../firebase';
 
 export default function SignUp({ toggleForm }) {
@@ -28,19 +28,19 @@ export default function SignUp({ toggleForm }) {
         displayName: nickname
       });
 
-      // --- UPDATED: Also save nickname and email to Firestore ---
       const initialProgress = {
-        displayName: nickname, // Add nickname
-        email: email,           // Add email
+        displayName: nickname,
+        email: email,
         level: 1,
         badges: 0,
-        streak: 0,
+        streak: 1, // Start with a 1-day streak
         ideasCreated: 0,
         completedLessons: [],
         currentLesson: 1,
-        isPaid: false
+        isPaid: false,
+        lessonAnswers: {},
+        lastLogin: serverTimestamp() // Set the initial login time
       };
-      // The path is "users", user.uid, so we are setting a document with the user's ID
       await setDoc(doc(db, "users", user.uid), initialProgress);
 
     } catch (err) {
