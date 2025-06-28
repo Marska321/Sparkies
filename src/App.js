@@ -11,6 +11,7 @@ import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
 import AdminDashboard from './components/AdminDashboard';
+import ProgressView from './components/ProgressView'; // Import the new ProgressView
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -72,7 +73,6 @@ const MainApp = () => {
       if (doc.exists()) {
         setUserProgress(doc.data());
       } else {
-        // If the document doesn't exist for some reason, create it.
         const initialProgress = {
           displayName: currentUser.displayName || "New User",
           email: currentUser.email,
@@ -142,8 +142,6 @@ const MainApp = () => {
   };
 
   const handleBackToDashboard = () => setSelectedLesson(null);
-
-  // --- Sub-Components ---
   
   const Navigation = () => (
     <div className="bg-white shadow-lg border-b-4 border-blue-400">
@@ -184,7 +182,7 @@ const MainApp = () => {
           <p className="text-purple-100 text-sm mb-4">{userProgress.badges} earned • {badges.length - userProgress.badges} to unlock</p>
           <div className="flex items-center gap-2"><Trophy size={20} /><span>Check Collection</span></div>
         </div>
-        <div onClick={() => { /* This card is not interactive yet */ }} className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '300ms'}}>
+        <div onClick={() => setCurrentView('progress')} className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '300ms'}}>
           <h3 className="font-bold text-lg mb-2">Track Progress</h3>
           <p className="text-green-100 text-sm mb-4">See your journey</p>
           <div className="flex items-center gap-2"><TrendingUp size={20} /><span>View Stats</span></div>
@@ -358,6 +356,7 @@ const MainApp = () => {
       case 'dashboard': return <Dashboard />;
       case 'badges': return <BadgeCollection />;
       case 'admin': return userProgress.isAdmin ? <AdminDashboard /> : <Dashboard />;
+      case 'progress': return <ProgressView userProgress={userProgress} lessons={lessons} />;
       default: return <Dashboard />;
     }
   };
@@ -370,6 +369,8 @@ const MainApp = () => {
           <div className="flex gap-4 mb-8">
             <button onClick={() => setCurrentView('dashboard')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'dashboard' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Dashboard</button>
             <button onClick={() => setCurrentView('badges')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'badges' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Badge Collection</button>
+            {/* NEW: Navigation button for Progress View */}
+            <button onClick={() => setCurrentView('progress')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'progress' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Track Progress</button>
           </div>
         )}
         {renderContent()}
