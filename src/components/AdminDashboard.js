@@ -3,13 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
-// This is the functional Admin Dashboard component.
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch all users from Firestore when the component loads
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -27,14 +25,12 @@ export default function AdminDashboard() {
     fetchUsers();
   }, []);
 
-  // Function to grant a user premium access
   const grantPremiumAccess = async (userId) => {
     try {
       const userDocRef = doc(db, "users", userId);
       await updateDoc(userDocRef, {
         isPaid: true
       });
-      // Update the local state to reflect the change immediately
       setUsers(users.map(user => 
         user.id === userId ? { ...user, isPaid: true } : user
       ));
@@ -61,8 +57,9 @@ export default function AdminDashboard() {
         <table className="min-w-full bg-white rounded-lg shadow">
           <thead className="bg-gray-100">
             <tr>
+              {/* UPDATED: Table headers */}
               <th className="text-left py-3 px-4 font-semibold text-sm">Nickname</th>
-              <th className="text-left py-3 px-4 font-semibold text-sm">User ID</th>
+              <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
               <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
               <th className="text-left py-3 px-4 font-semibold text-sm">Action</th>
             </tr>
@@ -70,8 +67,9 @@ export default function AdminDashboard() {
           <tbody>
             {users.map(user => (
               <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="py-3 px-4">{user.displayName || '(No Nickname)'}</td>
-                <td className="py-3 px-4 text-xs text-gray-500">{user.id}</td>
+                {/* UPDATED: Table data cells */}
+                <td className="py-3 px-4 font-medium">{user.displayName || '(No Nickname)'}</td>
+                <td className="py-3 px-4 text-sm text-gray-600">{user.email || '(No Email)'}</td>
                 <td className="py-3 px-4">
                   {user.isPaid ? (
                     <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">Premium</span>
