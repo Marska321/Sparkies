@@ -5,14 +5,22 @@ import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { useModal } from './contexts/ModalContext';
 import { auth, db } from './firebase';
-import { doc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
 import AdminDashboard from './components/AdminDashboard';
 import ProgressView from './components/ProgressView';
-import SparkFolio from './components/SparkFolio'; // Import the new SparkFolio component
+import SparkFolio from './components/SparkFolio';
+
+// Helper function to check if two dates are on the same calendar day
+const isSameDay = (date1, date2) => {
+    if (!date1 || !date2) return false;
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+};
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -66,27 +74,50 @@ const MainApp = () => {
   const [userProgress, setUserProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
 
+  // This useEffect now also handles the daily login streak
   useEffect(() => {
     if (!currentUser) return;
     setLoadingProgress(true);
     const userDocRef = doc(db, "users", currentUser.uid);
-    const unsub = onSnapshot(userDocRef, (doc) => {
+
+    const unsub = onSnapshot(userDocRef, async (doc) => {
       if (doc.exists()) {
-        setUserProgress(doc.data());
+        const userData = doc.data();
+        const today = new Date();
+        const lastLogin = userData.lastLogin?.toDate();
+
+        // Check for daily streak
+        if (!isSameDay(lastLogin, today)) {
+          const yesterday = new Date();
+          yesterday.setDate(today.getDate() - 1);
+          
+          const newStreak = isSameDay(lastLogin, yesterday) ? (userData.streak || 0) + 1 : 1;
+          
+          await updateDoc(userDocRef, {
+            streak: newStreak,
+            lastLogin: serverTimestamp()
+          });
+          // The onSnapshot listener will automatically update the state with this change
+        } else {
+            setUserProgress(userData);
+        }
+
       } else {
         const initialProgress = {
           displayName: currentUser.displayName || "New User",
           email: currentUser.email,
-          level: 1, badges: 0, streak: 0, ideasCreated: 0,
-          completedLessons: [], currentLesson: 1, isPaid: false, lessonAnswers: {}
+          level: 1, badges: 0, streak: 1, ideasCreated: 0,
+          completedLessons: [], currentLesson: 1, isPaid: false, lessonAnswers: {},
+          lastLogin: serverTimestamp()
         };
-        setDoc(userDocRef, initialProgress);
+        await setDoc(userDocRef, initialProgress);
       }
       setLoadingProgress(false);
     });
     return () => unsub();
   }, [currentUser]);
 
+  // This function now also handles leveling up
   const handleCompleteLesson = async (lessonId, answers) => {
     if (!userProgress || !currentUser) return;
     if (userProgress.completedLessons.includes(lessonId)) {
@@ -96,12 +127,17 @@ const MainApp = () => {
     try {
       const userDocRef = doc(db, "users", currentUser.uid);
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
+      const newCompletedLessons = [...userProgress.completedLessons, lessonId];
+
+      // Level up logic: Level up every 3 completed lessons
+      const newLevel = Math.floor(newCompletedLessons.length / 3) + 1;
       
       const updatedProgress = { 
         ...userProgress, 
-        completedLessons: [...userProgress.completedLessons, lessonId], 
+        completedLessons: newCompletedLessons, 
         currentLesson: userProgress.currentLesson + 1, 
         badges: newBadgesCount,
+        level: newLevel,
         lessonAnswers: {
           ...userProgress.lessonAnswers,
           [`lesson${lessonId}`]: answers
@@ -368,11 +404,10 @@ const MainApp = () => {
       <Navigation />
       <div className="max-w-7xl mx-auto px-4 py-8">
         {!selectedLesson && (
-          <div className="flex gap-4 mb-8">
+          <div className="flex flex-wrap gap-4 mb-8">
             <button onClick={() => setCurrentView('dashboard')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'dashboard' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Dashboard</button>
             <button onClick={() => setCurrentView('badges')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'badges' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Badge Collection</button>
             <button onClick={() => setCurrentView('progress')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'progress' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Track Progress</button>
-            {/* NEW: Navigation button for SparkFolio View */}
             <button onClick={() => setCurrentView('sparkfolio')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'sparkfolio' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>My SparkFolio</button>
           </div>
         )}
