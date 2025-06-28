@@ -14,7 +14,7 @@ import AdminDashboard from './components/AdminDashboard';
 import ProgressView from './components/ProgressView';
 import SparkFolio from './components/SparkFolio';
 
-// --- HELPER FUNCTIONS & COMPONENTS (Defined at the top level for stability) ---
+// --- HELPER COMPONENTS (DEFINED AT TOP-LEVEL FOR STABILITY AND PERFORMANCE) ---
 
 const isSameDay = (date1, date2) => {
     if (!date1 || !date2) return false;
@@ -26,24 +26,24 @@ const isSameDay = (date1, date2) => {
 const Navigation = React.memo(({ userProgress, handleLogout, setCurrentView }) => {
     const { currentUser } = useAuth();
     return (
-        <div className="bg-white shadow-lg border-b-4 border-blue-400">
+        <div className="bg-white shadow-lg border-b-4 border-blue-400 sticky top-0 z-20">
             <div className="max-w-7xl mx-auto px-4 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-full"><Star className="text-white" size={24} /></div>
                         <div><h1 className="text-2xl font-bold text-gray-800">SparkSkill</h1><p className="text-sm text-gray-600">Young Entrepreneur Academy</p></div>
                     </div>
-                    <div className="flex items-center gap-6">
-                        {userProgress.isPaid && <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold"><Award size={16}/><span>Premium</span></div>}
-                        {userProgress.isAdmin && <button onClick={() => setCurrentView('admin')} className="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold"><Shield size={16}/><span>Admin</span></button>}
-                        <div className="flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
+                    <div className="flex items-center gap-4 md:gap-6">
+                        {userProgress.isPaid && <div className="hidden sm:flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold"><Award size={16}/><span>Premium</span></div>}
+                        {userProgress.isAdmin && <button onClick={() => setCurrentView('admin')} className="hidden sm:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold"><Shield size={16}/><span>Admin</span></button>}
+                        <div className="hidden sm:flex items-center gap-2 bg-yellow-100 px-3 py-2 rounded-full"><Trophy className="text-yellow-600" size={16} /><span className="font-bold text-yellow-800">{userProgress.badges}</span></div>
                         <div className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">{currentUser.displayName?.charAt(0).toUpperCase() || 'S'}</div>
-                        <div><p className="font-bold text-gray-800">{currentUser.displayName || "Spark Star"}</p><p className="text-xs text-gray-600">Level {userProgress.level} Entrepreneur</p></div>
+                        <div className="hidden md:block"><p className="font-bold text-gray-800">{currentUser.displayName || "Spark Star"}</p><p className="text-xs text-gray-600">Level {userProgress.level} Entrepreneur</p></div>
                         </div>
                         <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-red-500 transition-colors">
                             <LogOut size={16} />
-                            <span>Log Out</span>
+                            <span className="hidden sm:inline">Log Out</span>
                         </button>
                     </div>
                 </div>
@@ -104,7 +104,7 @@ const LessonDetailView = ({ lesson, userProgress, onBack, onComplete, showModal 
             console.error("Error saving progress: ", error);
             showModal("Save Error", "Could not save your answers. Please try again.");
         }
-    }, [currentUser, userProgress, lesson, answers, showModal]);
+    }, [currentUser, userProgress, lesson.id, answers, showModal]);
 
     return (
         <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100 animate-fade-in-up">
@@ -138,7 +138,7 @@ const LessonDetailView = ({ lesson, userProgress, onBack, onComplete, showModal 
                                     const parts = task.split("___");
                                     return (
                                         <div key={i} className="flex flex-col gap-2 text-gray-700">
-                                            <label className="font-semibold">{parts[0]}</label>
+                                            <label className="font-semibold text-left">{parts[0]}</label>
                                             {activity.isReflection ? (
                                                 <textarea value={value} onChange={(e) => handleAnswerChange(activity, i, e.target.value)} className="w-full bg-gray-100 border-2 border-gray-200 focus:border-blue-500 focus:outline-none p-2 rounded-md h-24" placeholder="Your thoughts here..." />
                                             ) : (
@@ -154,15 +154,13 @@ const LessonDetailView = ({ lesson, userProgress, onBack, onComplete, showModal 
                     </div>
                 ))}</div>
             </div>
-            <div className="mt-8 pt-6 border-t-2 flex justify-center items-center gap-4">
+            <div className="mt-8 pt-6 border-t-2 flex justify-center items-center gap-4 flex-wrap">
                 <button onClick={handleSaveProgress} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl"><div className="flex items-center gap-3"><Save size={24}/><span>Save Progress</span></div></button>
                 <button onClick={() => onComplete(lesson.id, answers)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}><div className="flex items-center gap-3">{userProgress.completedLessons.includes(lesson.id) ? <CheckCircle size={24}/> : <Trophy size={24}/>}<span>{userProgress.completedLessons.includes(lesson.id) ? 'Lesson Complete!' : 'Mark as Complete'}</span></div></button>
             </div>
         </div>
     );
 };
-
-// --- AUTH & APP ROUTING COMPONENTS ---
 
 function AuthGate() {
   const [authView, setAuthView] = useState('login');
@@ -264,8 +262,9 @@ function MainApp() {
       showModal("Save Error", "Failed to save your progress. Please try again.");
     }
   }, [currentUser, userProgress, showModal]);
-
+  
   const handleSaveProgress = useCallback(async (lessonId, answers) => {
+    if (!currentUser || !userProgress) return;
     try {
         const userDocRef = doc(db, "users", currentUser.uid);
         await updateDoc(userDocRef, {
@@ -391,5 +390,18 @@ function MainApp() {
         {renderContent()}
       </div>
     </div>
+  );
+}
+
+// Final default export of the main App component
+export default function AppWrapper() {
+  const { isOpen, title, content, hideModal } = useModal();
+  const { currentUser } = useAuth();
+
+  return (
+    <>
+      <Modal isOpen={isOpen} title={title} onClose={hideModal}>{content}</Modal>
+      {!currentUser ? <AuthGate /> : <MainApp />}
+    </>
   );
 }
