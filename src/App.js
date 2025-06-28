@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield, Save } from 'lucide-react';
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield, Save, BookOpen } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { useModal } from './contexts/ModalContext';
@@ -11,7 +11,8 @@ import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
 import Modal from './components/Modal';
 import AdminDashboard from './components/AdminDashboard';
-import ProgressView from './components/ProgressView'; // Import the new ProgressView
+import ProgressView from './components/ProgressView';
+import SparkFolio from './components/SparkFolio'; // Import the new SparkFolio component
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -77,7 +78,7 @@ const MainApp = () => {
           displayName: currentUser.displayName || "New User",
           email: currentUser.email,
           level: 1, badges: 0, streak: 0, ideasCreated: 0,
-          completedLessons: [], currentLesson: 1, isPaid: false
+          completedLessons: [], currentLesson: 1, isPaid: false, lessonAnswers: {}
         };
         setDoc(userDocRef, initialProgress);
       }
@@ -357,6 +358,7 @@ const MainApp = () => {
       case 'badges': return <BadgeCollection />;
       case 'admin': return userProgress.isAdmin ? <AdminDashboard /> : <Dashboard />;
       case 'progress': return <ProgressView userProgress={userProgress} lessons={lessons} />;
+      case 'sparkfolio': return <SparkFolio userProgress={userProgress} />;
       default: return <Dashboard />;
     }
   };
@@ -369,8 +371,9 @@ const MainApp = () => {
           <div className="flex gap-4 mb-8">
             <button onClick={() => setCurrentView('dashboard')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'dashboard' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Dashboard</button>
             <button onClick={() => setCurrentView('badges')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'badges' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Badge Collection</button>
-            {/* NEW: Navigation button for Progress View */}
             <button onClick={() => setCurrentView('progress')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'progress' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Track Progress</button>
+            {/* NEW: Navigation button for SparkFolio View */}
+            <button onClick={() => setCurrentView('sparkfolio')} className={`px-6 py-3 rounded-full font-bold transition-all duration-300 ${currentView === 'sparkfolio' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>My SparkFolio</button>
           </div>
         )}
         {renderContent()}
