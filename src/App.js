@@ -1,11 +1,11 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield } from 'lucide-react';
+import { Star, Trophy, Lightbulb, Target, TrendingUp, Users, Award, Lock, CheckCircle, PlayCircle, ArrowLeft, Clock, Wrench, ListChecks, LogOut, DollarSign, Shield, Save } from 'lucide-react';
 import { lessons, badges } from './lessonData.js';
 import { useAuth } from './contexts/AuthContext';
 import { useModal } from './contexts/ModalContext';
 import { auth, db } from './firebase';
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import ForgotPassword from './components/ForgotPassword';
@@ -67,18 +67,26 @@ const MainApp = () => {
   useEffect(() => {
     if (!currentUser) return;
     setLoadingProgress(true);
-    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (doc) => {
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const unsub = onSnapshot(userDocRef, (doc) => {
       if (doc.exists()) {
         setUserProgress(doc.data());
       } else {
-        console.log("No such document for user progress!");
+        // If the document doesn't exist for some reason, create it.
+        const initialProgress = {
+          displayName: currentUser.displayName || "New User",
+          email: currentUser.email,
+          level: 1, badges: 0, streak: 0, ideasCreated: 0,
+          completedLessons: [], currentLesson: 1, isPaid: false
+        };
+        setDoc(userDocRef, initialProgress);
       }
       setLoadingProgress(false);
     });
     return () => unsub();
   }, [currentUser]);
 
-  const handleCompleteLesson = async (lessonId) => {
+  const handleCompleteLesson = async (lessonId, answers) => {
     if (!userProgress || !currentUser) return;
     if (userProgress.completedLessons.includes(lessonId)) {
         showModal("Already Done!", "You've already completed this lesson.");
@@ -87,7 +95,20 @@ const MainApp = () => {
     try {
       const userDocRef = doc(db, "users", currentUser.uid);
       const newBadgesCount = userProgress.badges + (badges.some(b => b.lesson === lessonId) ? 1 : 0);
-      const updatedProgress = { ...userProgress, completedLessons: [...userProgress.completedLessons, lessonId], currentLesson: userProgress.currentLesson + 1, badges: newBadgesCount };
+      
+      // --- NEW: Save answers along with other progress ---
+      const updatedProgress = { 
+        ...userProgress, 
+        completedLessons: [...userProgress.completedLessons, lessonId], 
+        currentLesson: userProgress.currentLesson + 1, 
+        badges: newBadgesCount,
+        // Store answers in a nested map, e.g., { lesson1: { activity2: "My answer" } }
+        lessonAnswers: {
+          ...userProgress.lessonAnswers,
+          [`lesson${lessonId}`]: answers
+        }
+      };
+
       await updateDoc(userDocRef, updatedProgress);
       showModal("Lesson Complete!", "Great job! Your progress has been saved.");
       handleBackToDashboard();
@@ -124,6 +145,8 @@ const MainApp = () => {
 
   const handleBackToDashboard = () => setSelectedLesson(null);
 
+  // --- All sub-components are now defined below ---
+  
   const Navigation = () => (
     <div className="bg-white shadow-lg border-b-4 border-blue-400">
       <div className="max-w-7xl mx-auto px-4 py-4">
@@ -153,29 +176,17 @@ const MainApp = () => {
   const Dashboard = () => (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div 
-          onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} 
-          className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
-          style={{animationDelay: '100ms'}}
-        >
+        <div onClick={() => { const current = lessons.find(l => l.id === userProgress.currentLesson); if (current) handleLessonClick(current); }} className="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '100ms'}}>
           <h3 className="font-bold text-lg mb-2">Continue Learning</h3>
           <p className="text-orange-100 text-sm mb-4">{lessons.find(l => l.id === userProgress.currentLesson)?.title || 'All Done!'}</p>
           <div className="flex items-center gap-2"><PlayCircle size={20} /><span>Resume Lesson {userProgress.currentLesson}</span></div>
         </div>
-        <div 
-          onClick={() => setCurrentView('badges')} 
-          className="bg-gradient-to-br from-purple-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
-          style={{animationDelay: '200ms'}}
-        >
+        <div onClick={() => setCurrentView('badges')} className="bg-gradient-to-br from-purple-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '200ms'}}>
           <h3 className="font-bold text-lg mb-2">View Badges</h3>
           <p className="text-purple-100 text-sm mb-4">{userProgress.badges} earned • {badges.length - userProgress.badges} to unlock</p>
           <div className="flex items-center gap-2"><Trophy size={20} /><span>Check Collection</span></div>
         </div>
-        <div 
-          onClick={() => { /* This card is not interactive yet */ }}
-          className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up"
-          style={{animationDelay: '300ms'}}
-        >
+        <div onClick={() => { /* This card is not interactive yet */ }} className="bg-gradient-to-br from-green-400 to-teal-500 p-6 rounded-xl text-white cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '300ms'}}>
           <h3 className="font-bold text-lg mb-2">Track Progress</h3>
           <p className="text-green-100 text-sm mb-4">See your journey</p>
           <div className="flex items-center gap-2"><TrendingUp size={20} /><span>View Stats</span></div>
@@ -205,7 +216,7 @@ const MainApp = () => {
         <div className={`text-4xl mb-3 ${badge.earned ? 'animate-bounce' : 'grayscale opacity-50'}`}>{badge.earned ? badge.icon : '🔒'}</div>
         <h3 className={`font-bold text-lg mb-2 ${badge.earned ? 'text-gray-800' : 'text-gray-500'}`}>{badge.name}</h3>
         <p className={`text-sm ${badge.earned ? 'text-gray-600' : 'text-gray-400'}`}>{badge.earned ? `Completed Lesson ${badge.lesson}` : `Complete Lesson ${badge.lesson}`}</p>
-        {badge.earned && (<p className="text-xs text-green-600 font-medium mt-2">Earned {new Date().toLocaleDateString()}</p>)}
+        {badge.earned && (<p className="text-xs text-green-600 font-medium mt-2">Earned</p>)}
       </div>
       {badge.earned && (<div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1"><CheckCircle size={16} /></div>)}
     </div>
@@ -238,8 +249,39 @@ const MainApp = () => {
       </div>
     );
   };
+  
+  // --- NEW: LessonDetailView is now fully interactive ---
+  const LessonDetailView = ({ lesson, onBack }) => {
+    // State to hold the user's answers for this specific lesson
+    const [answers, setAnswers] = useState(() => {
+        const savedAnswers = userProgress?.lessonAnswers?.[`lesson${lesson.id}`] || {};
+        return savedAnswers;
+    });
 
-  const LessonDetailView = ({ lesson, onBack }) => (
+    const handleAnswerChange = (activityId, taskIndex, value) => {
+        setAnswers(prev => ({
+            ...prev,
+            [`activity${activityId}_task${taskIndex}`]: value
+        }));
+    };
+
+    const handleSaveProgress = async () => {
+        try {
+            const userDocRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userDocRef, {
+                lessonAnswers: {
+                    ...userProgress.lessonAnswers,
+                    [`lesson${lesson.id}`]: answers
+                }
+            });
+            showModal("Progress Saved!", "Your answers have been saved successfully.");
+        } catch (error) {
+            console.error("Error saving progress: ", error);
+            showModal("Save Error", "Could not save your answers. Please try again.");
+        }
+    };
+
+    return (
     <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-100">
       <div className="flex items-center justify-between mb-8 border-b-2 pb-6 border-gray-100">
         <div className="flex items-center gap-6"><div className={`text-4xl p-4 rounded-full text-white ${lesson.color}`}>{lesson.icon}</div><div><h1 className="text-4xl font-bold text-gray-800">{lesson.title}</h1><p className="text-gray-600 mt-1">{lesson.description}</p></div></div>
@@ -255,12 +297,58 @@ const MainApp = () => {
             <span className="flex items-center gap-2"><Wrench size={16}/> {activity.tools.join(', ')}</span>
           </div>
           <p className="text-gray-700 mb-4">{activity.description}</p>
-          <div className="bg-white p-4 rounded-lg border"><h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4><ul className="list-disc list-inside space-y-2 text-gray-600">{activity.tasks.map((task, i) => <li key={i}>{task}</li>)}</ul>{activity.writeAnswers && (<div className="mt-4 pt-4 border-t">{activity.writeAnswers.map((answer, i) => <p key={i} className="mt-2 font-mono text-sm">{answer}</p>)}</div>)}</div>
+          <div className="bg-white p-4 rounded-lg border">
+            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ListChecks size={18}/> Tasks:</h4>
+            <div className="space-y-4">
+            {activity.tasks.map((task, i) => {
+                const answerKey = `activity${activity.id}_task${i}`;
+                const value = answers[answerKey] || '';
+                // Render an input field for tasks with a fill-in-the-blank
+                if(task.includes("___")) {
+                    const parts = task.split("___");
+                    return (
+                        <div key={i} className="flex flex-wrap items-center gap-2 text-gray-700">
+                            <span>{parts[0]}</span>
+                            <input 
+                                type="text"
+                                value={value}
+                                onChange={(e) => handleAnswerChange(activity.id, i, e.target.value)}
+                                className="flex-grow bg-gray-100 border-b-2 border-gray-300 focus:border-blue-500 focus:outline-none px-2 py-1 rounded-md"
+                            />
+                            <span>{parts[1]}</span>
+                        </div>
+                    )
+                }
+                // Otherwise, just render the task as text
+                return <li key={i} className="list-disc list-inside">{task}</li>
+            })}
+            </div>
+            {activity.writeAnswers && (<div className="mt-4 pt-4 border-t">{activity.writeAnswers.map((answer, i) => {
+                 const answerKey = `activity${activity.id}_writeAnswer${i}`;
+                 const value = answers[answerKey] || '';
+                 const parts = answer.split("___");
+                 return (
+                     <div key={i} className="flex flex-wrap items-center gap-2 text-gray-700 mt-2">
+                         <span className="font-mono text-sm">{parts[0]}</span>
+                         <input 
+                            type="text"
+                            value={value}
+                            onChange={(e) => handleAnswerChange(activity.id, `writeAnswer${i}`, e.target.value)}
+                            className="flex-grow bg-gray-100 border-b-2 border-gray-300 focus:border-blue-500 focus:outline-none px-2 py-1 rounded-md"
+                         />
+                         <span>{parts[1]}</span>
+                     </div>
+                 )
+            })}</div>)}
+          </div>
           {activity.tip && <p className="text-sm text-purple-600 bg-purple-50 p-3 mt-4 rounded-lg"><strong>Tip:</strong> {activity.tip}</p>}
         </div>))}</div>
       </div>
-      <div className="mt-8 pt-6 border-t-2 text-center">
-        <button onClick={() => handleCompleteLesson(lesson.id)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}>
+      <div className="mt-8 pt-6 border-t-2 flex justify-center items-center gap-4">
+        <button onClick={handleSaveProgress} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl">
+            <div className="flex items-center gap-3"><Save size={24}/><span>Save Progress</span></div>
+        </button>
+        <button onClick={() => handleCompleteLesson(lesson.id, answers)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 text-lg shadow-lg hover:shadow-xl disabled:bg-gray-400" disabled={userProgress.completedLessons.includes(lesson.id)}>
           <div className="flex items-center gap-3">{userProgress.completedLessons.includes(lesson.id) ? <CheckCircle size={24}/> : <Trophy size={24}/>}<span>{userProgress.completedLessons.includes(lesson.id) ? 'Lesson Complete!' : 'Mark as Complete'}</span></div>
         </button>
       </div>
